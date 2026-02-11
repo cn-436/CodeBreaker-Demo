@@ -11,24 +11,45 @@ struct CodeBreakerView: View {
     // MARK: Data Owned by Me
     @State private var game: CodeBreaker = CodeBreaker()
     @State private var selection: Int = 0
+    @State private var restarting = false
     
     // MARK: - body
     var body: some View {
         VStack {
-            if game.isOver {
-                view(for: game.masterCode)
+            Button("Restart") {
+                withAnimation(.easeInOut(duration: 3)) {
+                    restarting = true
+                    game.restart()
+                } completion: {
+                    restarting = false
+                }
             }
+            CodeView(code: game.masterCode)
+                .opacity(game.isOver ? 1 : 0)
             if !game.isOver {
-                view(for: game.guess)
+                CodeView(code: game.guess, selection: $selection) { guessButton }
+                    .animation(nil, value: game.attempts.count)
+                    .opacity(restarting ? 0 : 1)
             }
             ScrollView {
                 ForEach(game.attempts.indices.reversed(), id: \.self) { index in
-                    view(for: game.attempts[index])
+                    CodeView(code: game.attempts[index]) {
+                        MatchMarkers(matches: game.attempts[index].matches)
+                    }
+                    .transition(
+                        AnyTransition.asymmetric(
+//                            insertion: .move(edge: .top),
+                            insertion: game.isOver ? .opacity : .move(edge: .top),
+                            removal: .move(edge: .trailing))
+                        )
                 }
             }
-            PegChooserView(choices: game.pegChoices) { peg in
-                game.setGuessPeg(peg, at: selection)
-                selection = (selection + 1) % game.guess.pegs.count
+            if !game.isOver {
+                PegChooserView(choices: game.pegChoices) { peg in
+                    game.setGuessPeg(peg, at: selection)
+                    selection = (selection + 1) % game.guess.pegs.count
+                }
+                .transition(AnyTransition.offset(x: 0, y: 250))
             }
         }
         .padding()
@@ -36,7 +57,7 @@ struct CodeBreakerView: View {
     
     var guessButton: some View {
         Button("Guess") {
-            withAnimation {
+            withAnimation(.easeInOut(duration: 3)) {
                 selection = 0
                 game.attemptGuess()
             }
@@ -49,18 +70,6 @@ struct CodeBreakerView: View {
         static let maximumFontSize: CGFloat = 80
         static let minimumFontSize: CGFloat = 8
         static let scaleFactor = minimumFontSize / maximumFontSize
-    }
-    
-    func view(for code: Code) -> some View {
-        return HStack {
-            CodeView(code: code, selection: $selection)
-            MatchMarkers(matches: code.matches)
-                .overlay {
-                    if code.kind == .guess {
-                        guessButton
-                    }
-                }
-        }
     }
 }
 
