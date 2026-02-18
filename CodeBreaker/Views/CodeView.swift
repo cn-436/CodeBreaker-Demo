@@ -37,12 +37,21 @@ struct CodeView<AncillaryView>: View where AncillaryView: View {
                     .background {
                         Group {
                             if selection == index, code.kind == .guess {
-                                Circle()
+                                RoundedRectangle(cornerRadius: 10)
                                     .foregroundStyle(Selection.color)
                                     .matchedGeometryEffect(id: "selection", in: selectionNameSpace)
                             }
                         }
-                        .animation(.easeInOut(duration: 3), value: selection)
+                        .animation(.selection, value: selection)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .foregroundStyle(code.isHidden ? Color.gray : .clear)
+                            .transaction { transaction in
+                                if code.isHidden {
+                                    transaction.animation = nil
+                                }
+                            }
                     }
                     .onTapGesture {
                         if code.kind == .guess {
